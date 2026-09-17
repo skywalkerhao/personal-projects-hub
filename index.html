@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>个人代表项目仪表盘 (Personal Projects Hub)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 9999px;
+      display: inline-block;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+  <!-- 顶部导航栏 -->
+  <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-teal-500/20">
+          <i class="fa-solid fa-shapes text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+            个人代表项目表
+            <span class="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800 font-medium">清晰 · 可维护 · 智能提醒</span>
+          </h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">精选核心代表作，量化进度、把控里程碑与交付节奏</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- 提醒快捷按钮 -->
+        <button id="notifyBtn" class="relative p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="即将截止与超期提醒">
+          <i class="fa-regular fa-bell text-lg"></i>
+          <span id="alertCountBadge" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
+        </button>
+
+        <!-- 主题切换 -->
+        <button id="themeToggle" class="p-2 rounded-lg text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="深色/浅色模式">
+          <i class="fa-solid fa-moon dark:hidden text-lg"></i>
+          <i class="fa-solid fa-sun hidden dark:block text-lg text-amber-400"></i>
+        </button>
+
+        <!-- 备份与导出 -->
+        <div class="relative group">
+          <button class="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <span class="hidden sm:inline">数据备份</span>
+          </button>
+          <div class="absolute right-0 top-full mt-1.5 w-44 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 py-1.5 hidden group-hover:block z-50 text-xs">
+            <button onclick="exportData()" class="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2">
+              <i class="fa-solid fa-download text-teal-600"></i> 导出 JSON 备份
+            </button>
+            <label class="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-upload text-blue-500"></i> 导入 JSON 恢复
+              <input type="file" id="importFileInput" accept=".json" class="hidden" onchange="importData(event)">
+            </label>
+            <button onclick="resetToSample()" class="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/60 flex items-center gap-2 text-amber-600">
+              <i class="fa-solid fa-rotate-left"></i> 恢复示例数据
+            </button>
+          </div>
+        </div>
+
+        <!-- 新建代表项目 -->
+        <button onclick="openModal()" class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-500 active:bg-teal-700 rounded-xl shadow-sm shadow-teal-600/30 transition">
+          <i class="fa-solid fa-plus"></i>
+          <span>新建项目</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体内容 -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- 顶部状态总览卡片 -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-briefcase"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400">总代表项目</p>
+          <p id="statTotal" class="text-xl font-bold mt-0.5">0</p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-spinner animate-[spin_4s_linear_infinite]"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400">进行中 / 冲刺</p>
+          <p id="statActive" class="text-xl font-bold mt-0.5">0</p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg">
+          <i class="fa-regular fa-clock"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400">7天内即将到期</p>
+          <p id="statExpiring" class="text-xl font-bold mt-0.5 text-amber-600 dark:text-amber-400">0</p>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800/80 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <p class="text-xs font-medium text-slate-500 dark:text-slate-400">延期 / 需关注</p>
+          <p id="statOverdue" class="text-xl font-bold mt-0.5 text-rose-600 dark:text-rose-400">0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 提醒消息横幅 (如有重要超期/临期项目触发) -->
+    <section id="alertBanner" class="hidden rounded-2xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-teal-500/10 border border-amber-300 dark:border-amber-700/60 p-4">
+      <div class="flex items-start gap-3">
+        <div class="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5">
+          <i class="fa-solid fa-bell-ring fa-shake"></i>
+        </div>
+        <div class="flex-1">
+          <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            项目交付与维护提醒中心
+            <span id="bannerBadge" class="text-xs bg-amber-500 text-white font-normal px-2 py-0.5 rounded-full">3 个预警</span>
+          </h2>
+          <div id="alertList" class="mt-2 text-xs space-y-1.5 text-slate-600 dark:text-slate-300">
+            <!-- 预警项目列表 -->
+          </div>
+        </div>
+        <button onclick="dismissAlertBanner()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- 搜索筛选与视图切换栏 -->
+    <section class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-slate-800/80 p-3 sm:p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+      <div class="flex flex-1 items-center gap-2">
+        <div class="relative flex-1 max-w-md">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" id="searchInput" placeholder="搜索项目名、标签、角色、技术栈..." oninput="filterProjects()"
+                 class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+
+        <select id="statusFilter" onchange="filterProjects()" class="text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <option value="ALL">全部状态</option>
+          <option value="PLANNING">规划调研</option>
+          <option value="PROGRESS">核心推进</option>
+          <option value="MAINTAIN">长期维护</option>
+          <option value="DONE">已交付归档</option>
+          <option value="PAUSED">暂停挂起</option>
+        </select>
+
+        <select id="priorityFilter" onchange="filterProjects()" class="text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <option value="ALL">全部优先级</option>
+          <option value="P0">P0 (特级代表作)</option>
+          <option value="P1">P1 (重点攻坚)</option>
+          <option value="P2">P2 (持续沉淀)</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-2 justify-end">
+        <!-- 排序方式 -->
+        <select id="sortSelect" onchange="filterProjects()" class="text-xs sm:text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500">
+          <option value="urgency">按紧迫度排序</option>
+          <option value="priority">按优先级排序</option>
+          <option value="progress">按进度高到低</option>
+          <option value="updated">按最近更新</option>
+        </select>
+
+        <!-- 视图切换按钮 -->
+        <div class="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+          <button id="viewTableBtn" onclick="switchView('table')" class="px-3 py-1.5 rounded-lg font-medium transition bg-white dark:bg-slate-800 shadow-sm text-teal-600 dark:text-teal-400">
+            <i class="fa-solid fa-table-list mr-1"></i>表格
+          </button>
+          <button id="viewGridBtn" onclick="switchView('grid')" class="px-3 py-1.5 rounded-lg font-medium transition text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+            <i class="fa-solid fa-grip-vertical mr-1"></i>卡片
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 视图区域: 表格视图 -->
+    <section id="tableView" class="bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600 dark:text-slate-300">
+          <thead class="bg-slate-50 dark:bg-slate-900/60 text-xs text-slate-500 dark:text-slate-400 uppercase border-b border-slate-200 dark:border-slate-700/60">
+            <tr>
+              <th scope="col" class="px-4 py-3.5 font-semibold">代表项目 / 概述</th>
+              <th scope="col" class="px-3 py-3.5 font-semibold w-24">等级</th>
+              <th scope="col" class="px-3 py-3.5 font-semibold w-28">状态</th>
+              <th scope="col" class="px-4 py-3.5 font-semibold w-44">进度与完成度</th>
+              <th scope="col" class="px-4 py-3.5 font-semibold w-36">核心里程碑 / 提醒</th>
+              <th scope="col" class="px-3 py-3.5 font-semibold w-32">技术栈 / 领域</th>
+              <th scope="col" class="px-4 py-3.5 font-semibold text-right w-24">操作</th>
+            </tr>
+          </thead>
+          <tbody id="projectTableBody" class="divide-y divide-slate-100 dark:divide-slate-800/80">
+            <!-- 渲染项目行 -->
+          </tbody>
+        </table>
+      </div>
+      <div id="tableEmptyNotice" class="hidden text-center py-12">
+        <i class="fa-regular fa-folder-open text-4xl text-slate-300 dark:text-slate-600 mb-3"></i>
+        <p class="text-sm text-slate-500">没有匹配的项目记录，点击右上角新建一个代表作吧！</p>
+      </div>
+    </section>
+
+    <!-- 视图区域: 卡片网格视图 -->
+    <section id="gridView" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- 动态插入卡片 -->
+    </section>
+
+  </main>
+
+  <!-- 编辑 / 新增 项目模态框 -->
+  <div id="projectModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700/70 flex items-center justify-between">
+        <h3 id="modalTitle" class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-nib text-teal-600"></i>
+          <span>新建代表项目</span>
+        </h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Form Body (滚动区域) -->
+      <form id="projectForm" onsubmit="saveProject(event)" class="px-6 py-4 space-y-4 overflow-y-auto flex-1 text-sm">
+        <input type="hidden" id="fieldId">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">项目名称 <span class="text-rose-500">*</span></label>
+            <input type="text" id="fieldName" required placeholder="如：Personal AI OS / 全栈分布式电商架构"
+                   class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">代表作级别</label>
+            <select id="fieldPriority" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="P0">P0 (特级代表作)</option>
+              <option value="P1" selected>P1 (核心攻坚)</option>
+              <option value="P2">P2 (持续积累)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">一句话亮点 / 核心价值</label>
+          <input type="text" id="fieldSummary" placeholder="简练描述：解决什么痛点、核心技术创新或业务影响..."
+                 class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">当前阶段</label>
+            <select id="fieldStatus" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="PLANNING">规划调研</option>
+              <option value="PROGRESS" selected>核心推进</option>
+              <option value="MAINTAIN">长期维护</option>
+              <option value="DONE">已交付归档</option>
+              <option value="PAUSED">暂停挂起</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">完成进度 (<span id="progressVal">60</span>%)</label>
+            <input type="range" id="fieldProgress" min="0" max="100" value="60" oninput="document.getElementById('progressVal').innerText=this.value"
+                   class="w-full h-2 mt-3 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-600">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">健康状态</label>
+            <select id="fieldHealth" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+              <option value="HEALTHY">🟢 正常推进</option>
+              <option value="AT_RISK">🟡 存在卡点/风险</option>
+              <option value="BLOCKED">🔴 严重阻塞/超期</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 关键里程碑与到期提醒 -->
+        <div class="p-3.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-teal-700 dark:text-teal-400 flex items-center gap-1.5">
+              <i class="fa-regular fa-calendar-check"></i> 近期核心里程碑与提醒
+            </span>
+            <span class="text-[11px] text-slate-400">系统将自动高亮临期与逾期项</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">里程碑目标</label>
+              <input type="text" id="fieldMilestone" placeholder="例如：完成 MVP 版本发布 / 答辩提报"
+                     class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-teal-500">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-500 mb-1">提醒截止日期 (Due Date)</label>
+              <input type="date" id="fieldDueDate"
+                     class="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-1 focus:ring-teal-500">
+            </div>
+          </div>
+        </div>
+
+        <!-- 角色、技术栈、链接 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">个人主要职责 / 角色</label>
+            <input type="text" id="fieldRole" placeholder="如：架构设计、前端主导、独立开发者..."
+                   class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">技术栈 / 关键字 (逗号隔开)</label>
+            <input type="text" id="fieldTags" placeholder="React, Node.js, Docker, WebGL..."
+                   class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">成果 / 代码仓库链接 (可选)</label>
+            <input type="url" id="fieldRepoUrl" placeholder="https://github.com/..."
+                   class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">在线演示 / 体验地址 (可选)</label>
+            <input type="url" id="fieldDemoUrl" placeholder="https://myproject.com..."
+                   class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">详细备注 / 下一步行动项 (Next Actions)</label>
+          <textarea id="fieldNotes" rows="2" placeholder="记录待办事项、难点攻克计划或回顾总结..."
+                    class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"></textarea>
+        </div>
+
+        <!-- 提交按钮 -->
+        <div class="pt-3 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-700/60">
+          <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl text-slate-500 hover:text-slate-700 dark:text-slate-400 text-xs font-medium">
+            取消
+          </button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30">
+            保存项目
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast 提示 -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-12 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-teal-600 px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs font-medium pointer-events-none">
+    <i id="toastIcon" class="fa-solid fa-check text-teal-400 dark:text-white"></i>
+    <span id="toastMsg">操作成功</span>
+  </div>
+
+  <script>
+    // 初始优质样例数据（涵盖各种代表项目类型）
+    const DEFAULT_PROJECTS = [
+      {
+        id: "proj-1",
+        name: "Personal AI Workspace (个人智能知识库)",
+        priority: "P0",
+        summary: "基于本地大语言模型与向量数据库的私有化知识库引擎与知识提炼助手",
+        status: "PROGRESS",
+        progress: 75,
+        health: "HEALTHY",
+        milestone: "发布 v1.0 全量插件体系并开放 API",
+        dueDate: getRelativeDate(3), // 3天后到期（临期触发提醒）
+        role: "核心架构师 / 全栈开发",
+        tags: ["TypeScript", "Next.js", "Python", "VectorDB"],
+        repoUrl: "https://github.com/example/ai-workspace",
+        demoUrl: "https://workspace-demo.example.com",
+        notes: "已完成向量检索优化与上下文截断逻辑，接下来重点优化 Web 检索与 UI 流式响应体验。",
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "proj-2",
+        name: "High-Performance Data Mesh (企业级数据调度引擎)",
+        priority: "P0",
+        summary: "百万级任务 DAG 编排系统，支撑高并发异构任务分发与毫秒级状态同步",
+        status: "MAINTAIN",
+        progress: 100,
+        health: "HEALTHY",
+        milestone: "完成第一阶段生产压测并在 GitHub 归档",
+        dueDate: getRelativeDate(-10), // 已经交付完成
+        role: "技术负责人 / 后端主导",
+        tags: ["Go", "gRPC", "Redis", "Kubernetes", "Prometheus"],
+        repoUrl: "https://github.com/example/datamesh",
+        demoUrl: "",
+        notes: "项目已稳定运行半年无重大事故，已形成专利 1 项与技术博客分享。",
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "proj-3",
+        name: "DevTool CLI & Agent Plugin (工程师效率自动化工具箱)",
+        priority: "P1",
+        summary: "打通 Git、CI/CD 与本地开发环境的自动化脚本工具集合",
+        status: "PROGRESS",
+        progress: 40,
+        health: "AT_RISK",
+        milestone: "解决跨平台 Apple Silicon / Linux 容器二进制兼容性",
+        dueDate: getRelativeDate(1), // 1天内即将到期
+        role: "独立开发者",
+        tags: ["Rust", "Shell", "Docker", "CLI"],
+        repoUrl: "https://github.com/example/devtool-cli",
+        demoUrl: "",
+        notes: "目前 ARM64 构建流水线偶发内存抖动，需要补充 CI 缓存策略。",
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "proj-4",
+        name: "SaaS 创作者增长分析看板 (CreativePulse)",
+        priority: "P2",
+        summary: "为多平台创作者提供跨平台数据汇总、互动率智能归因与图表分析",
+        status: "PLANNING",
+        progress: 20,
+        health: "HEALTHY",
+        milestone: "完成用户访谈与前端交互原型定稿",
+        dueDate: getRelativeDate(15),
+        role: "产品负责人 / UI 设计",
+        tags: ["Vue3", "TailwindCSS", "ECharts", "Supabase"],
+        repoUrl: "",
+        demoUrl: "https://creativepulse.example.com",
+        notes: "已收到 12 位初期创作者反馈，重点强化每周自动化邮件总结。",
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "proj-5",
+        name: "Web3/DeFi 链上套利与监控机器人 (AlphaScan)",
+        priority: "P1",
+        summary: "高频监听 EVM Mempool 并行模拟交易路径，毫秒级捕捉套利窗口",
+        status: "PAUSED",
+        progress: 60,
+        health: "BLOCKED",
+        milestone: "升级 RPC 专属私网节点以降低网络延迟",
+        dueDate: getRelativeDate(-2), // 已经超期（逾期提醒）
+        role: "算法与智能合约研究",
+        tags: ["Solidity", "Node.js", "Web3.js", "Ethers"],
+        repoUrl: "",
+        demoUrl: "",
+        notes: "因近期公共节点限流暂时挂起，等待专属专线配置就绪后重启。",
+        updatedAt: new Date().toISOString()
+      }
+    ];
+
+    function getRelativeDate(daysOffset) {
+      const d = new Date();
+      d.setDate(d.getDate() + daysOffset);
+      return d.toISOString().split('T')[0];
+    }
+
+    // 本地持久化与状态变量
+    const STORAGE_KEY = "personal_projects_hub_data";
+    let projects = [];
+    let currentView = "table";
+
+    // 初始化
+    function init() {
+      const localData = localStorage.getItem(STORAGE_KEY);
+      if (localData) {
+        try {
+          projects = JSON.parse(localData);
+        } catch (e) {
+          projects = DEFAULT_PROJECTS;
+        }
+      } else {
+        projects = DEFAULT_PROJECTS;
+        saveToStorage();
+      }
+
+      // 初始化主题
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+
+      render();
+    }
+
+    function saveToStorage() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    }
+
+    // 主题切换
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.theme = isDark ? 'dark' : 'light';
+    });
+
+    // 提醒按钮快捷跳动聚焦
+    document.getElementById('notifyBtn').addEventListener('click', () => {
+      const alertBanner = document.getElementById('alertBanner');
+      if (alertBanner.classList.contains('hidden')) {
+        alertBanner.classList.remove('hidden');
+        showToast("已展开提醒中心", "info");
+      }
+      alertBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    function dismissAlertBanner() {
+      document.getElementById('alertBanner').classList.add('hidden');
+    }
+
+    // 计算到期与预警
+    function analyzeAlerts() {
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      const alerts = [];
+
+      projects.forEach(p => {
+        if (p.status === 'DONE') return; // 已交付不触发警报
+        if (!p.dueDate) return;
+
+        const target = new Date(p.dueDate);
+        target.setHours(0,0,0,0);
+        const diffTime = target - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 0) {
+          alerts.push({
+            type: 'overdue',
+            days: Math.abs(diffDays),
+            project: p,
+            message: `已逾期 ${Math.abs(diffDays)} 天：未完成里程碑「${p.milestone || '未注明'}」`
+          });
+        } else if (diffDays <= 7) {
+          alerts.push({
+            type: 'expiring',
+            days: diffDays,
+            project: p,
+            message: diffDays === 0 ? `今天截止！里程碑「${p.milestone || '未注明'}」` : `距截止仅剩 ${diffDays} 天：里程碑「${p.milestone || '未注明'}」`
+          });
+        }
+      });
+
+      return alerts;
+    }
+
+    // 更新概览统计与预警信息
+    function updateStatsAndAlerts() {
+      const total = projects.length;
+      const active = projects.filter(p => p.status === 'PROGRESS').length;
+      const alerts = analyzeAlerts();
+
+      const overdueCount = alerts.filter(a => a.type === 'overdue').length;
+      const expiringCount = alerts.filter(a => a.type === 'expiring').length;
+
+      document.getElementById('statTotal').innerText = total;
+      document.getElementById('statActive').innerText = active;
+      document.getElementById('statExpiring').innerText = expiringCount;
+      document.getElementById('statOverdue').innerText = overdueCount;
+
+      const badge = document.getElementById('alertCountBadge');
+      const banner = document.getElementById('alertBanner');
+      const alertList = document.getElementById('alertList');
+      const bannerBadge = document.getElementById('bannerBadge');
+
+      if (alerts.length > 0) {
+        badge.classList.remove('hidden');
+        banner.classList.remove('hidden');
+        bannerBadge.innerText = `${alerts.length} 个关注事项`;
+
+        alertList.innerHTML = alerts.map(a => `
+          <div class="flex items-center justify-between py-1 border-b border-slate-200/50 dark:border-slate-800/60 last:border-0">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${a.type === 'overdue' ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}">
+                ${a.type === 'overdue' ? '已逾期' : '临期提醒'}
+              </span>
+              <strong class="font-medium text-slate-800 dark:text-slate-200 cursor-pointer hover:underline" onclick="editProject('${a.project.id}')">${escapeHtml(a.project.name)}</strong>
+              <span class="text-slate-500 dark:text-slate-400">· ${escapeHtml(a.message)}</span>
+            </div>
+            <button onclick="editProject('${a.project.id}')" class="text-teal-600 hover:text-teal-700 font-medium text-[11px] underline ml-2">处理</button>
+          </div>
+        `).join('');
+      } else {
+        badge.classList.add('hidden');
+        banner.classList.add('hidden');
+      }
+    }
+
+    // 格式化展示状态与优先级
+    const STATUS_MAP = {
+      PLANNING: { label: '规划调研', class: 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800' },
+      PROGRESS: { label: '核心推进', class: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800' },
+      MAINTAIN: { label: '长期维护', class: 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800' },
+      DONE: { label: '已交付归档', class: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700' },
+      PAUSED: { label: '暂停挂起', class: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800' }
+    };
+
+    const PRIORITY_MAP = {
+      P0: { label: 'P0 特级', class: 'bg-rose-500 text-white' },
+      P1: { label: 'P1 重点', class: 'bg-teal-600 text-white' },
+      P2: { label: 'P2 沉淀', class: 'bg-slate-500 text-white' }
+    };
+
+    const HEALTH_ICON_MAP = {
+      HEALTHY: '<span title="健康推进中" class="text-emerald-500 text-xs"><i class="fa-solid fa-circle-check"></i> 正常</span>',
+      AT_RISK: '<span title="存在风险卡点" class="text-amber-500 text-xs"><i class="fa-solid fa-triangle-exclamation"></i> 预警</span>',
+      BLOCKED: '<span title="严重受阻" class="text-rose-500 text-xs"><i class="fa-solid fa-circle-exclamation"></i> 阻塞</span>'
+    };
+
+    // 切换视图
+    function switchView(view) {
+      currentView = view;
+      const btnTable = document.getElementById('viewTableBtn');
+      const btnGrid = document.getElementById('viewGridBtn');
+      const viewTable = document.getElementById('tableView');
+      const viewGrid = document.getElementById('gridView');
+
+      if (view === 'table') {
+        viewTable.classList.remove('hidden');
+        viewGrid.classList.add('hidden');
+        btnTable.className = "px-3 py-1.5 rounded-lg font-medium transition bg-white dark:bg-slate-800 shadow-sm text-teal-600 dark:text-teal-400";
+        btnGrid.className = "px-3 py-1.5 rounded-lg font-medium transition text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+      } else {
+        viewTable.classList.add('hidden');
+        viewGrid.classList.remove('hidden');
+        btnGrid.className = "px-3 py-1.5 rounded-lg font-medium transition bg-white dark:bg-slate-800 shadow-sm text-teal-600 dark:text-teal-400";
+        btnTable.className = "px-3 py-1.5 rounded-lg font-medium transition text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white";
+      }
+    }
+
+    // 筛选与排序
+    function getFilteredProjects() {
+      const search = document.getElementById('searchInput').value.trim().toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const priority = document.getElementById('priorityFilter').value;
+      const sort = document.getElementById('sortSelect').value;
+
+      let list = projects.filter(p => {
+        if (status !== 'ALL' && p.status !== status) return false;
+        if (priority !== 'ALL' && p.priority !== priority) return false;
+        if (search) {
+          const matchName = (p.name || '').toLowerCase().includes(search);
+          const matchSummary = (p.summary || '').toLowerCase().includes(search);
+          const matchRole = (p.role || '').toLowerCase().includes(search);
+          const matchTags = (p.tags || []).some(t => t.toLowerCase().includes(search));
+          const matchMilestone = (p.milestone || '').toLowerCase().includes(search);
+          if (!matchName && !matchSummary && !matchRole && !matchTags && !matchMilestone) return false;
+        }
+        return true;
+      });
+
+      // 排序
+      const now = new Date();
+      now.setHours(0,0,0,0);
+
+      list.sort((a, b) => {
+        if (sort === 'urgency') {
+          // 紧迫度：未交付中超期最先，接着是即将到期，然后是按到期日升序
+          if (a.status === 'DONE' && b.status !== 'DONE') return 1;
+          if (b.status === 'DONE' && a.status !== 'DONE') return -1;
+          const aDate = a.dueDate ? new Date(a.dueDate).getTime() : 9999999999999;
+          const bDate = b.dueDate ? new Date(b.dueDate).getTime() : 9999999999999;
+          return aDate - bDate;
+        } else if (sort === 'priority') {
+          const pOrder = { P0: 0, P1: 1, P2: 2 };
+          return pOrder[a.priority] - pOrder[b.priority];
+        } else if (sort === 'progress') {
+          return b.progress - a.progress;
+        } else if (sort === 'updated') {
+          const aU = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+          const bU = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+          return bU - aU;
+        }
+        return 0;
+      });
+
+      return list;
+    }
+
+    function filterProjects() {
+      render();
+    }
+
+    // 格式化日期提示
+    function getDueBadge(dueDate, status) {
+      if (!dueDate) return `<span class="text-xs text-slate-400">无截止日期</span>`;
+      if (status === 'DONE') {
+        return `<span class="text-xs text-slate-400"><i class="fa-regular fa-calendar-check mr-1"></i>${dueDate} (已交付)</span>`;
+      }
+
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      const target = new Date(dueDate);
+      target.setHours(0,0,0,0);
+      const diffDays = Math.ceil((target - now) / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return `<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 font-semibold border border-rose-200 dark:border-rose-900">
+          <i class="fa-solid fa-circle-exclamation"></i> 逾期 ${Math.abs(diffDays)} 天 (${dueDate})
+        </span>`;
+      } else if (diffDays === 0) {
+        return `<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-amber-500 text-white font-bold animate-pulse">
+          <i class="fa-regular fa-bell"></i> 今日截止
+        </span>`;
+      } else if (diffDays <= 7) {
+        return `<span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 font-medium border border-amber-200 dark:border-amber-800">
+          <i class="fa-regular fa-clock"></i> 剩 ${diffDays} 天 (${dueDate})
+        </span>`;
+      } else {
+        return `<span class="text-xs text-slate-500 dark:text-slate-400">
+          <i class="fa-regular fa-calendar mr-1"></i>${dueDate}
+        </span>`;
+      }
+    }
+
+    // 主渲染函数
+    function render() {
+      updateStatsAndAlerts();
+      const list = getFilteredProjects();
+
+      const tbody = document.getElementById('projectTableBody');
+      const gridView = document.getElementById('gridView');
+      const emptyNotice = document.getElementById('tableEmptyNotice');
+
+      if (list.length === 0) {
+        tbody.innerHTML = '';
+        gridView.innerHTML = '';
+        emptyNotice.classList.remove('hidden');
+        return;
+      }
+      emptyNotice.classList.add('hidden');
+
+      // 1. 渲染表格
+      tbody.innerHTML = list.map(item => {
+        const priorityMeta = PRIORITY_MAP[item.priority] || PRIORITY_MAP.P1;
+        const statusMeta = STATUS_MAP[item.status] || STATUS_MAP.PROGRESS;
+        const healthIcon = HEALTH_ICON_MAP[item.health] || '';
+        const dueTag = getDueBadge(item.dueDate, item.status);
+
+        return `
+          <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-750/50 transition border-b border-slate-100 dark:border-slate-800/80">
+            <td class="px-4 py-3.5">
+              <div class="flex items-start gap-3">
+                <div class="mt-1">${healthIcon}</div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-900 dark:text-white cursor-pointer hover:text-teal-600 transition" onclick="editProject('${item.id}')">${escapeHtml(item.name)}</span>
+                    ${item.repoUrl ? `<a href="${item.repoUrl}" target="_blank" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs" title="代码仓库"><i class="fa-brands fa-github"></i></a>` : ''}
+                    ${item.demoUrl ? `<a href="${item.demoUrl}" target="_blank" class="text-teal-600 hover:text-teal-500 text-xs" title="在线预览/演示"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>` : ''}
+                  </div>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">${escapeHtml(item.summary || '暂无详细亮点描述')}</p>
+                  ${item.role ? `<span class="inline-block mt-1 text-[11px] text-slate-400"><i class="fa-regular fa-user mr-1"></i>${escapeHtml(item.role)}</span>` : ''}
+                </div>
+              </div>
+            </td>
+
+            <td class="px-3 py-3.5 align-top">
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${priorityMeta.class}">
+                ${priorityMeta.label}
+              </span>
+            </td>
+
+            <td class="px-3 py-3.5 align-top">
+              <span class="inline-block text-xs px-2.5 py-1 rounded-lg border font-medium ${statusMeta.class}">
+                ${statusMeta.label}
+              </span>
+            </td>
+
+            <td class="px-4 py-3.5 align-top">
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-xs font-semibold">
+                  <span>${item.progress}%</span>
+                  <span class="text-[11px] text-slate-400">${item.progress === 100 ? '已交付' : (item.progress > 0 ? '推进中' : '初起步')}</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                  <div class="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full transition-all duration-300" style="width: ${item.progress}%"></div>
+                </div>
+              </div>
+            </td>
+
+            <td class="px-4 py-3.5 align-top">
+              <div class="space-y-1">
+                <p class="text-xs font-medium text-slate-700 dark:text-slate-200 line-clamp-1" title="${escapeHtml(item.milestone || '未指定')}">
+                  ${item.milestone ? escapeHtml(item.milestone) : '<span class="text-slate-400">待设定里程碑</span>'}
+                </p>
+                <div>${dueTag}</div>
+              </div>
+            </td>
+
+            <td class="px-3 py-3.5 align-top">
+              <div class="flex flex-wrap gap-1">
+                ${(item.tags || []).slice(0, 3).map(t => `
+                  <span class="text-[11px] bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md">${escapeHtml(t)}</span>
+                `).join('')}
+                ${(item.tags || []).length > 3 ? `<span class="text-[10px] text-slate-400 self-center">+${(item.tags || []).length - 3}</span>` : ''}
+              </div>
+            </td>
+
+            <td class="px-4 py-3.5 align-top text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1.5">
+                <button onclick="editProject('${item.id}')" class="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-slate-100 dark:hover:bg-slate-700" title="编辑项目">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button onclick="deleteProject('${item.id}')" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-700" title="删除项目">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // 2. 渲染网格卡片
+      gridView.innerHTML = list.map(item => {
+        const priorityMeta = PRIORITY_MAP[item.priority] || PRIORITY_MAP.P1;
+        const statusMeta = STATUS_MAP[item.status] || STATUS_MAP.PROGRESS;
+        const dueTag = getDueBadge(item.dueDate, item.status);
+
+        return `
+          <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${priorityMeta.class}">
+                    ${priorityMeta.label}
+                  </span>
+                  <span class="text-xs px-2 py-0.5 rounded-lg border font-medium ${statusMeta.class}">
+                    ${statusMeta.label}
+                  </span>
+                </div>
+                <div class="flex items-center gap-1">
+                  ${HEALTH_ICON_MAP[item.health] || ''}
+                  <button onclick="editProject('${item.id}')" class="p-1 text-slate-400 hover:text-teal-600 ml-1"><i class="fa-solid fa-pen text-xs"></i></button>
+                  <button onclick="deleteProject('${item.id}')" class="p-1 text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                </div>
+              </div>
+
+              <h4 class="font-bold text-base mt-3 text-slate-900 dark:text-white line-clamp-1 hover:text-teal-600 cursor-pointer" onclick="editProject('${item.id}')">
+                ${escapeHtml(item.name)}
+              </h4>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">${escapeHtml(item.summary || '暂无一句话介绍')}</p>
+
+              <!-- 里程碑与提醒 -->
+              <div class="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-800 text-xs space-y-1">
+                <div class="text-slate-600 dark:text-slate-300 font-medium line-clamp-1">
+                  <i class="fa-regular fa-flag text-teal-600 mr-1"></i>${item.milestone ? escapeHtml(item.milestone) : '暂无关键里程碑'}
+                </div>
+                <div>${dueTag}</div>
+              </div>
+            </div>
+
+            <div class="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+              <!-- 进度条 -->
+              <div>
+                <div class="flex justify-between text-xs mb-1 font-medium">
+                  <span class="text-slate-500">项目进度</span>
+                  <span>${item.progress}%</span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                  <div class="bg-gradient-to-r from-teal-500 to-emerald-400 h-full rounded-full" style="width: ${item.progress}%"></div>
+                </div>
+              </div>
+
+              <!-- 标签与链接 -->
+              <div class="flex items-center justify-between text-xs pt-1">
+                <div class="flex flex-wrap gap-1">
+                  ${(item.tags || []).slice(0, 2).map(t => `<span class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] px-2 py-0.5 rounded">${escapeHtml(t)}</span>`).join('')}
+                </div>
+                <div class="flex items-center gap-2">
+                  ${item.repoUrl ? `<a href="${item.repoUrl}" target="_blank" class="text-slate-400 hover:text-slate-800 dark:hover:text-white" title="代码仓库"><i class="fa-brands fa-github text-sm"></i></a>` : ''}
+                  ${item.demoUrl ? `<a href="${item.demoUrl}" target="_blank" class="text-teal-600 hover:text-teal-500" title="体验Demo"><i class="fa-solid fa-arrow-up-right-from-square text-xs"></i></a>` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 表单与模态框处理
+    function openModal(editId = null) {
+      const modal = document.getElementById('projectModal');
+      const form = document.getElementById('projectForm');
+      form.reset();
+
+      if (editId) {
+        const item = projects.find(p => p.id === editId);
+        if (!item) return;
+        document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-nib text-teal-600"></i> 编辑代表项目';
+        document.getElementById('fieldId').value = item.id;
+        document.getElementById('fieldName').value = item.name || '';
+        document.getElementById('fieldPriority').value = item.priority || 'P1';
+        document.getElementById('fieldSummary').value = item.summary || '';
+        document.getElementById('fieldStatus').value = item.status || 'PROGRESS';
+        document.getElementById('fieldProgress').value = item.progress || 0;
+        document.getElementById('progressVal').innerText = item.progress || 0;
+        document.getElementById('fieldHealth').value = item.health || 'HEALTHY';
+        document.getElementById('fieldMilestone').value = item.milestone || '';
+        document.getElementById('fieldDueDate').value = item.dueDate || '';
+        document.getElementById('fieldRole').value = item.role || '';
+        document.getElementById('fieldTags').value = (item.tags || []).join(', ');
+        document.getElementById('fieldRepoUrl').value = item.repoUrl || '';
+        document.getElementById('fieldDemoUrl').value = item.demoUrl || '';
+        document.getElementById('fieldNotes').value = item.notes || '';
+      } else {
+        document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-plus text-teal-600"></i> 新建代表项目';
+        document.getElementById('fieldId').value = '';
+        document.getElementById('progressVal').innerText = '60';
+        document.getElementById('fieldProgress').value = 60;
+        document.getElementById('fieldDueDate').value = getRelativeDate(7); // 默认设置7天后里程碑
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeModal() {
+      document.getElementById('projectModal').classList.add('hidden');
+    }
+
+    function editProject(id) {
+      openModal(id);
+    }
+
+    function deleteProject(id) {
+      const target = projects.find(p => p.id === id);
+      if (!target) return;
+      if (confirm(`确定要移除代表项目「${target.name}」吗？`)) {
+        projects = projects.filter(p => p.id !== id);
+        saveToStorage();
+        render();
+        showToast("项目已移除", "info");
+      }
+    }
+
+    function saveProject(e) {
+      e.preventDefault();
+      const id = document.getElementById('fieldId').value;
+      const tagsRaw = document.getElementById('fieldTags').value;
+      const tags = tagsRaw.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+
+      const projectData = {
+        name: document.getElementById('fieldName').value.trim(),
+        priority: document.getElementById('fieldPriority').value,
+        summary: document.getElementById('fieldSummary').value.trim(),
+        status: document.getElementById('fieldStatus').value,
+        progress: parseInt(document.getElementById('fieldProgress').value, 10),
+        health: document.getElementById('fieldHealth').value,
+        milestone: document.getElementById('fieldMilestone').value.trim(),
+        dueDate: document.getElementById('fieldDueDate').value,
+        role: document.getElementById('fieldRole').value.trim(),
+        tags: tags,
+        repoUrl: document.getElementById('fieldRepoUrl').value.trim(),
+        demoUrl: document.getElementById('fieldDemoUrl').value.trim(),
+        notes: document.getElementById('fieldNotes').value.trim(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if (id) {
+        // 更新
+        const index = projects.findIndex(p => p.id === id);
+        if (index !== -1) {
+          projects[index] = { ...projects[index], ...projectData };
+          showToast("项目已成功更新");
+        }
+      } else {
+        // 新建
+        projectData.id = "proj-" + Date.now();
+        projects.unshift(projectData);
+        showToast("代表项目创建成功！");
+      }
+
+      saveToStorage();
+      closeModal();
+      render();
+    }
+
+    // 导入与导出
+    function exportData() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `personal_projects_backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("备份数据已导出为 JSON 文件");
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (Array.isArray(parsed)) {
+            projects = parsed;
+            saveToStorage();
+            render();
+            showToast("成功导入项目数据！");
+          } else {
+            alert("文件格式不正确：应为 JSON 数组");
+          }
+        } catch (err) {
+          alert("无法解析 JSON 文件: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+
+    function resetToSample() {
+      if (confirm("恢复示例数据将覆盖当前的修改，确定继续吗？")) {
+        projects = JSON.parse(JSON.stringify(DEFAULT_PROJECTS));
+        saveToStorage();
+        render();
+        showToast("已恢复默认示例数据");
+      }
+    }
+
+    // 提示信息 Toast
+    let toastTimeout;
+    function showToast(msg, type = "success") {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMsg.innerText = msg;
+      if (type === 'info') {
+        toastIcon.className = "fa-solid fa-circle-info text-blue-400";
+      } else {
+        toastIcon.className = "fa-solid fa-check text-teal-400";
+      }
+
+      toast.classList.remove('translate-y-12', 'opacity-0');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-12', 'opacity-0');
+      }, 2500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 运行初始化
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
