@@ -44,6 +44,9 @@
           <i class="fa-solid fa-upload"></i> 导入
           <input type="file" accept=".json" class="hidden" onchange="importData(event)">
         </label>
+        <button onclick="resetDefaultData()" class="px-2 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-teal-600 shadow-sm transition" title="强制刷新为最新默认数据">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
       </div>
     </header>
 
@@ -135,7 +138,9 @@
       return d.toISOString().split('T')[0];
     }
 
+    const DATA_VERSION = "2026-09-17-v3";
     const KEY = "minimal_todo_data";
+    const VERSION_KEY = "minimal_todo_version";
     const SUPABASE_CONFIG_KEY = "minimal_todo_supabase_config";
     let items = [];
     let currentFilter = 'ALL';
@@ -143,18 +148,31 @@
     let realtimeChannel = null;
 
     function init() {
-      // 1. 先从本地读取快速呈现
+      // 检查版本，如果发现新版本且用户未连接 Supabase，自动加载新默认列表
+      const currentVersion = localStorage.getItem(VERSION_KEY);
       const saved = localStorage.getItem(KEY);
-      if (saved) {
-        try { items = JSON.parse(saved); } catch(e) { items = DEFAULT_DATA; }
-      } else {
+
+      if (!saved || currentVersion !== DATA_VERSION) {
         items = DEFAULT_DATA;
         saveLocal();
+        localStorage.setItem(VERSION_KEY, DATA_VERSION);
+      } else {
+        try { items = JSON.parse(saved); } catch(e) { items = DEFAULT_DATA; }
       }
       render();
 
       // 2. 检查并初始化 Supabase 云端同步
       initSupabase();
+    }
+
+    function resetDefaultData() {
+      if (confirm("是否重置并加载最新的官方待办推荐与攻略？")) {
+        items = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        saveLocal();
+        localStorage.setItem(VERSION_KEY, DATA_VERSION);
+        if (supabaseClient) pushAllToCloud();
+        render();
+      }
     }
 
     function initSupabase() {
