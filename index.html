@@ -23,10 +23,14 @@
           <span>待办 & 核心项目</span>
           <span id="pendingBadge" class="text-xs px-2 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-full font-medium">4 项待办</span>
         </h1>
-        <p class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+        <p class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span>简单、直接、可提醒。</span>
           <span id="syncStatus" class="inline-flex items-center gap-1 text-[11px] text-slate-400">
             <i class="fa-solid fa-hard-drive"></i> 本地模式
+          </span>
+          <span class="text-slate-300">·</span>
+          <span id="lastRefreshTime" class="inline-flex items-center gap-1 text-[11px] text-slate-400">
+            <i class="fa-regular fa-clock"></i> 上次刷新: 刚刚
           </span>
         </p>
       </div>
@@ -44,8 +48,8 @@
           <i class="fa-solid fa-upload"></i> 导入
           <input type="file" accept=".json" class="hidden" onchange="importData(event)">
         </label>
-        <button onclick="resetDefaultData()" class="px-2 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-400 hover:text-teal-600 shadow-sm transition" title="强制刷新为最新默认数据">
-          <i class="fa-solid fa-rotate"></i>
+        <button onclick="handleManualRefresh()" class="px-2 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-teal-600 shadow-sm transition" title="立即刷新同步">
+          <i id="refreshIcon" class="fa-solid fa-rotate"></i>
         </button>
       </div>
     </header>
@@ -138,7 +142,7 @@
       return d.toISOString().split('T')[0];
     }
 
-    const DATA_VERSION = "2026-09-17-v4";
+    const DATA_VERSION = "2026-09-17-v5";
     const KEY = "minimal_todo_data";
     const VERSION_KEY = "minimal_todo_version";
     const SUPABASE_CONFIG_KEY = "minimal_todo_supabase_config";
@@ -146,6 +150,30 @@
     let currentFilter = 'ALL';
     let supabaseClient = null;
     let realtimeChannel = null;
+    let lastRefreshTimestamp = Date.now();
+
+    function formatTime(date) {
+      const d = date || new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const month = pad(d.getMonth() + 1);
+      const day = pad(d.getDate());
+      const hours = pad(d.getHours());
+      const mins = pad(d.getMinutes());
+      const secs = pad(d.getSeconds());
+      return `${month}-${day} ${hours}:${mins}:${secs}`;
+    }
+
+    function recordRefresh() {
+      lastRefreshTimestamp = Date.now();
+      updateRefreshTimeDisplay();
+    }
+
+    function updateRefreshTimeDisplay() {
+      const el = document.getElementById('lastRefreshTime');
+      if (!el) return;
+      const d = new Date(lastRefreshTimestamp);
+      el.innerHTML = `<i class="fa-regular fa-clock text-teal-600"></i> 上次刷新: ${formatTime(d)}`;
+    }
 
     function init() {
       // 检查版本，如果发现新版本且用户未连接 Supabase，自动加载新默认列表
@@ -159,10 +187,32 @@
       } else {
         try { items = JSON.parse(saved); } catch(e) { items = DEFAULT_DATA; }
       }
+      recordRefresh();
       render();
 
       // 2. 检查并初始化 Supabase 云端同步
       initSupabase();
+    }
+
+    async function handleManualRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+
+      if (supabaseClient) {
+        await pullFromCloud();
+      } else {
+        // 本地模式重新读盘
+        const saved = localStorage.getItem(KEY);
+        if (saved) {
+          try { items = JSON.parse(saved); } catch(e) {}
+        }
+      }
+      recordRefresh();
+      render();
+
+      setTimeout(() => {
+        if (icon) icon.classList.remove('fa-spin');
+      }, 500);
     }
 
     function resetDefaultData() {
@@ -171,6 +221,7 @@
         saveLocal();
         localStorage.setItem(VERSION_KEY, DATA_VERSION);
         if (supabaseClient) pushAllToCloud();
+        recordRefresh();
         render();
       }
     }
@@ -227,6 +278,7 @@
             note: d.note || ""
           }));
           saveLocal();
+          recordRefresh();
           render();
           updateSyncBadge(true, "已实时云同步");
         } else if (items.length > 0) {
@@ -268,6 +320,7 @@
               if (!items.find(i => String(i.id) === String(d.id))) {
                 items.unshift({ id: String(d.id), title: d.title, dueDate: d.due_date || "", done: !!d.done, note: d.note || "" });
                 saveLocal();
+                recordRefresh();
                 render();
               }
             } else if (payload.eventType === 'UPDATE') {
@@ -276,11 +329,13 @@
               if (idx !== -1) {
                 items[idx] = { id: String(d.id), title: d.title, dueDate: d.due_date || "", done: !!d.done, note: d.note || "" };
                 saveLocal();
+                recordRefresh();
                 render();
               }
             } else if (payload.eventType === 'DELETE') {
               items = items.filter(i => String(i.id) !== String(payload.old.id));
               saveLocal();
+              recordRefresh();
               render();
             }
           })
@@ -557,7 +612,15 @@
       return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    window.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('DOMContentLoaded', () => {
+      init();
+      // 页面从后台唤醒或重新切回时自动刷新时间显示并拉取最新状态
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          handleManualRefresh();
+        }
+      });
+    });
   </script>
 </body>
 </html>
