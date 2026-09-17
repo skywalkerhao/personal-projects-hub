@@ -120,6 +120,56 @@
 
   </div>
 
+  <!-- 待办详情与编辑弹窗 Modal -->
+  <div id="detailModal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="p-5 border-b border-slate-100 flex items-start justify-between gap-3">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <button id="modalToggleDoneBtn" onclick="modalToggleDone()" class="text-xl text-slate-300 hover:text-teal-600 transition flex-shrink-0">
+            <i class="fa-regular fa-circle"></i>
+          </button>
+          <div class="flex-1 min-w-0">
+            <input type="text" id="modalTitleInput" class="w-full text-base font-bold text-slate-900 focus:outline-none bg-transparent border-b border-transparent hover:border-slate-200 focus:border-teal-500 transition py-0.5" placeholder="事项名称">
+          </div>
+        </div>
+        <button onclick="closeDetailModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-400 font-medium mb-1 flex items-center gap-1.5">
+            <i class="fa-regular fa-calendar text-teal-600"></i> 截止与提醒日期
+          </label>
+          <input type="date" id="modalDueDateInput" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-400 font-medium mb-1 flex items-center gap-1.5">
+            <i class="fa-regular fa-file-lines text-teal-600"></i> 详细说明与攻略备忘
+          </label>
+          <textarea id="modalNoteInput" rows="6" placeholder="输入攻略、地址、办理步骤、注意事项等备忘..."
+                    class="w-full bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-800 text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-teal-500 resize-y"></textarea>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <button onclick="modalDeleteItem()" class="text-rose-600 hover:text-rose-700 text-xs font-medium flex items-center gap-1 px-2 py-1.5 rounded-lg hover:bg-rose-50 transition">
+          <i class="fa-solid fa-trash-can"></i> 删除事项
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeDetailModal()" class="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium transition">
+            取消
+          </button>
+          <button onclick="modalSaveItem()" class="px-4 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium shadow-sm transition">
+            保存修改
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 初始必要数据（默认包含用户核心生活待办 + 2项核心项目）
     const DEFAULT_DATA = [
@@ -489,9 +539,9 @@
         }
 
         return `
-          <div class="group bg-white p-3 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between gap-3 hover:border-slate-300 transition">
+          <div class="group bg-white p-3.5 rounded-xl border border-slate-200/90 shadow-xs flex items-center justify-between gap-3 hover:border-slate-300 hover:shadow-sm transition cursor-pointer" onclick="openDetailModal('${item.id}', event)">
             <div class="flex items-center gap-3 flex-1 min-w-0">
-              <button onclick="toggleDone('${item.id}')" class="text-base text-slate-300 hover:text-teal-600 transition flex-shrink-0">
+              <button onclick="event.stopPropagation(); toggleDone('${item.id}')" class="text-base text-slate-300 hover:text-teal-600 transition flex-shrink-0" title="${item.done ? '标记为未完成' : '标记为已完成'}">
                 ${item.done ? '<i class="fa-solid fa-circle-check text-teal-600"></i>' : '<i class="fa-regular fa-circle"></i>'}
               </button>
               <div class="flex-1 min-w-0">
@@ -502,9 +552,9 @@
               </div>
             </div>
 
-            <div class="flex items-center gap-2 flex-shrink-0">
+            <div class="flex items-center gap-2 flex-shrink-0" onclick="event.stopPropagation()">
               ${dateTag}
-              <button onclick="editNote('${item.id}')" class="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 p-1 text-xs transition" title="备注/修改">
+              <button onclick="openDetailModal('${item.id}')" class="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 p-1 text-xs transition" title="查看详情与备注">
                 <i class="fa-solid fa-pen"></i>
               </button>
               <button onclick="deleteItem('${item.id}')" class="text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 p-1 text-xs transition" title="删除">
@@ -537,6 +587,83 @@
       syncItemUpsert(newItem);
       render();
     }
+
+    let editingItemId = null;
+
+    function openDetailModal(id, event) {
+      if (event && event.target && (event.target.tagName === 'BUTTON' || event.target.closest('button'))) return;
+      const item = items.find(i => i.id === id);
+      if (!item) return;
+
+      editingItemId = id;
+      document.getElementById('modalTitleInput').value = item.title || "";
+      document.getElementById('modalDueDateInput').value = item.dueDate || "";
+      document.getElementById('modalNoteInput').value = item.note || "";
+
+      updateModalDoneButton(item.done);
+      document.getElementById('detailModal').classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').classList.add('hidden');
+      editingItemId = null;
+    }
+
+    function updateModalDoneButton(isDone) {
+      const btn = document.getElementById('modalToggleDoneBtn');
+      if (!btn) return;
+      btn.innerHTML = isDone ? '<i class="fa-solid fa-circle-check text-teal-600"></i>' : '<i class="fa-regular fa-circle"></i>';
+      btn.title = isDone ? "点击标记为未完成" : "点击标记为已完成";
+    }
+
+    function modalToggleDone() {
+      if (!editingItemId) return;
+      const item = items.find(i => i.id === editingItemId);
+      if (!item) return;
+      item.done = !item.done;
+      updateModalDoneButton(item.done);
+      syncItemUpsert(item);
+      render();
+    }
+
+    function modalSaveItem() {
+      if (!editingItemId) return;
+      const item = items.find(i => i.id === editingItemId);
+      if (!item) return;
+
+      const newTitle = document.getElementById('modalTitleInput').value.trim();
+      const newDueDate = document.getElementById('modalDueDateInput').value;
+      const newNote = document.getElementById('modalNoteInput').value.trim();
+
+      if (!newTitle) {
+        alert("事项名称不能为空");
+        return;
+      }
+
+      item.title = newTitle;
+      item.dueDate = newDueDate;
+      item.note = newNote;
+
+      syncItemUpsert(item);
+      render();
+      closeDetailModal();
+    }
+
+    function modalDeleteItem() {
+      if (!editingItemId) return;
+      if (confirm("确定要删除此待办事项吗？")) {
+        const idToDelete = editingItemId;
+        closeDetailModal();
+        deleteItem(idToDelete);
+      }
+    }
+
+    // 支持 ESC 键关闭详情弹窗
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !document.getElementById('detailModal').classList.contains('hidden')) {
+        closeDetailModal();
+      }
+    });
 
     function toggleDone(id) {
       const target = items.find(i => i.id === id);
